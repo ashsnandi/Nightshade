@@ -1,0 +1,51 @@
+//import everything needed for console outputs (NO GUI)
+import java.io.*;
+import java.net.*;
+
+public class ChatServer
+{
+    ServerSocket overallSocket;
+    //create a new server socket,
+    Socket socket;
+    //create the individual socket
+    DataInputStream dis;
+    //create the data input stream :)
+    DataOutputStream dos;
+    //create the data output stream ;)
+
+    public ChatServer() {
+        try //try & catch
+            {
+            System.out.println(InetAddress.getLocalHost());
+            System.out.println("Server Started");
+            overallSocket = new ServerSocket(1025); //we are not root users int ehs chool system so we must use a port higher than  1025
+            socket = overallSocket.accept(); //accept the socket
+            System.out.println(socket);
+            System.out.println("CLIENT CONNECTED");
+            dis = new DataInputStream(socket.getInputStream());
+            dos = new DataOutputStream(socket.getOutputStream());
+            ServerChat();
+            } catch (Exception e)
+            {
+            System.out.println(e);
+            }
+    }
+
+    public static void main(String as[]) {
+        new ChatServer();
+    }
+
+    public void ServerChat() throws IOException {
+        String str, s1;
+        do
+            {
+            str = dis.readUTF(); //readUTF, built in method that reads the data from the stream
+            System.out.println("Client Message:" + str); //prints the steam
+            BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+            s1 = br.readLine();
+            dos.writeUTF(s1);
+            dos.flush();
+            }
+        while (!s1.equals("bye"));
+    }
+}
