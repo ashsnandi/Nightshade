@@ -1,0 +1,68 @@
+
+
+//import all classes from both packages using *
+import java.io.*;//used to process input (texts/binary files) & the output (java files)
+import java.net.*;//provides classes/interfaces for networking
+
+public class Server extends Thread{
+
+    //declaration of 4 objects--instances of the classes specified
+    ServerSocket serverSock;
+    Socket clientSock;
+    DataInputStream dataIn;
+    DataOutputStream dataOut;
+
+    public Server()
+    {
+        try
+        {
+            System.out.println(InetAddress.getLocalHost());
+            System.out.println("Server Started");
+
+            //we are not root users in the school system so we must use a port higher than 1025
+            serverSock = new ServerSocket(1025);
+            clientSock = serverSock.accept(); //accept the socket
+            System.out.println(clientSock);
+            System.out.println("CLIENT CONNECTED");
+
+            dataIn = new DataInputStream(clientSock.getInputStream());
+            dataOut = new DataOutputStream(clientSock.getOutputStream());
+
+            ServerChat chat = new ServerChat();
+            chat.start();//Causes this thread to begin execution; the JVM calls the run method of this thread
+        }
+        
+        catch (Exception e)
+        {
+            System.out.println(e);
+        }
+    }
+
+    public static void main(String as[])
+    {
+        new Server();
+    }
+}
+
+
+//*****************in another java file****************************
+import java.io.*;
+
+public class ServerChat extends Thread
+{
+
+    public void run(DataInputStream dis, DataOutputStream dos) throws IOException {
+        String str, s1;
+        System.out.print(Thread.currentThread().getId());
+        do {
+            str = dis.readUTF(); //readUTF, built in method that reads the data from the stream
+            System.out.println("Client Message:" + str); //prints the steam
+            BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+            s1 = br.readLine();
+            dos.writeUTF(s1);
+
+            dos.flush();
+        }
+        while (!s1.equals("bye"));
+    }
+}
