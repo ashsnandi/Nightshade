@@ -1,14 +1,14 @@
 import java.io.*;
 import java.net.Socket;
 
-public class Client2 {
+public class Client {
     //declaration of 4 objects--instances of the classes specified
     Socket socket;
     DataInputStream dataIn;
     DataOutputStream dataOut;
 
     //if port # is already booked throw an exception
-    public Client2()
+    public Client()
     {
         try
         {
@@ -49,6 +49,6 @@ public class Client2 {
 
     public static void main(String args[])
     {
-        new Client2();
+        new Client();
     }
 }
