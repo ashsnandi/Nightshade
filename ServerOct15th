@@ -1,5 +1,4 @@
 
-
 //import all classes from both packages using *
 import java.io.*;//used to process input (texts/binary files) & the output (java files)
 import java.net.*;//provides classes/interfaces for networking
@@ -24,26 +23,31 @@ public class Server
         {
             System.out.println(InetAddress.getLocalHost());
             System.out.println("Server Started");
-
-            //we are not root users in the school system so we must use a port higher than 1025
             serverSock = new ServerSocket(8372);
-            clientSock = serverSock.accept(); //accept the socket
-            System.out.println(clientSock);
-            System.out.println("CLIENT CONNECTED");
 
-            dataIn = new DataInputStream(clientSock.getInputStream());
-            dataOut = new DataOutputStream(clientSock.getOutputStream());
+            for (int i = 1; i < 3; i++)
+            {
+                //we are not root users in the school system, so we must use a port higher than 1025
 
-            /*creates a chat object from class ServerChat--which has implemented an Interface called Runnable.
-            Runnable is an interface whose instances can run as a Thread.
-            we can't extend more than 1 class using Thread; Runnable enables multiple-inheritance*/
-            ServerChat chat = new ServerChat(dataOut, dataIn);
+                clientSock = serverSock.accept(); //accept the socket
+                System.out.println(clientSock);
+                System.out.println("CLIENT " + i + " CONNECTED");
 
-            /*create an object of class Thread--a class which has implemented Runnable--and
-            pass chat object of class ServerChat to it--a class which has implemented Runnable too.*/
-            Thread thread1 = new Thread(chat);
+                dataIn = new DataInputStream(clientSock.getInputStream());
+                dataOut = new DataOutputStream(clientSock.getOutputStream());
 
-            thread1.start();//Causes this thread to begin execution; the JVM calls the run method of this thread
+                /*creates a chat object from class ServerChat--which has implemented an Interface called Runnable.
+                Runnable is an interface whose instances can run as a Thread.
+                we can't extend more than 1 class using Thread; Runnable enables multiple-inheritance*/
+                ServerChat chat = new ServerChat(dataOut, dataIn);
+
+                /*create an object of class Thread--a class which has implemented Runnable--and
+                pass chat object of class ServerChat to it--a class which has implemented Runnable too.*/
+                Thread thread = new Thread(chat);
+
+                thread.start();//Causes this thread to begin execution; the JVM calls the run method of this thread
+            }
+
 
         }
 
@@ -54,7 +58,6 @@ public class Server
     }
 
 }
-
 
 //*******************************************************in another java file**************************************
 import java.io.*;
