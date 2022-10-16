@@ -1,0 +1,54 @@
+import java.io.*;
+import java.net.Socket;
+
+public class Client2 {
+    //declaration of 4 objects--instances of the classes specified
+    Socket socket;
+    DataInputStream dataIn;
+    DataOutputStream dataOut;
+
+    //if port # is already booked throw an exception
+    public Client2()
+    {
+        try
+        {
+            final String SERVER_IP = "localhost";
+            final int PORT = 8372;
+
+            //Creates a socket & connects it to specified port # at host side
+            //port # = represents which application to run on a server
+            socket = new Socket(SERVER_IP, PORT);
+            dataIn = new DataInputStream(socket.getInputStream());
+            dataOut = new DataOutputStream(socket.getOutputStream());
+
+            startChat();
+        }
+        catch(Exception e)
+        {
+            System.out.println(e);
+        }
+    }
+    public void startChat() throws IOException
+    {
+        /*
+        BufferedReader class is used to read the text from a character-based input stream
+        it enables us to minimize the number of I/O operations by reading chunks of
+        characters and storing them in an internal buffer.
+        */
+        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(System.in));
+        String clientMsg;
+        do
+        {
+            clientMsg = bufferedReader.readLine();
+            dataOut.writeUTF(" 2 :" + clientMsg);
+            dataOut.flush();
+            System.out.println("Server Message: " + dataIn.readUTF());
+        }
+        while(!clientMsg.equals("stop"));
+    }
+
+    public static void main(String args[])
+    {
+        new Client2();
+    }
+}
