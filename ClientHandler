@@ -1,0 +1,122 @@
+
+//in another java file
+import java.net.Socket;
+import java.io.*;
+import java.util.ArrayList;
+
+public class ClientHandler implements Runnable
+{
+
+    /*to keep track of all clients. Whenever a client sends a message we loop through this array and
+    send message to all of them. static because we want it to belong to the class not each object of the class.*/
+    public static ArrayList<ClientHandler> clientHandlers = new ArrayList<>();
+    private Socket clientSock;
+    private BufferedReader bufferedReader;//used to read messages from clients
+    private BufferedWriter bufferedWriter;//used to send messages--sent from other clients--to clients
+    private String clientUsername;
+
+    public ClientHandler (Socket clientSock)
+    {
+        try
+        {
+            this.clientSock = clientSock;
+            this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(clientSock.getOutputStream()));
+            this.bufferedReader = new BufferedReader(new InputStreamReader(clientSock.getInputStream()));
+            this.clientUsername = bufferedReader.readLine();
+            clientHandlers.add(this);
+            broadcastMsg(clientUsername + " has entered the chat.");
+        }
+        catch (IOException e)
+        {
+            closeAll(clientSock, bufferedReader, bufferedWriter);
+        }
+    }
+
+    @Override
+    public void run()
+    {
+        String clientMsg;
+        do
+        {
+            try
+            {
+                clientMsg = bufferedReader.readLine();
+                broadcastMsg(clientMsg);
+            }
+            catch (IOException e)
+            {
+                closeAll(clientSock, bufferedReader, bufferedWriter);
+                break;//break out of while loop
+            }
+        } while (clientSock.isConnected());
+    }
+    public void broadcastMsg(String msg)
+    {
+        /*
+        for (int i = 0; i < clientHandlers.size(); i++)
+        {
+            try
+            {
+                if (!clientHandlers.get(i).clientUsername.equals(clientUsername))
+                {
+                    clientHandlers.get(i).bufferedWriter.write(msg);
+                    //sends a newline character which tells the bufferedReader to stop waiting for input from it
+                    clientHandlers.get(i).bufferedWriter.newLine();
+                    //a buffer will not be sent to its output stream unless it's full--flush() sends msg unfilled
+                    clientHandlers.get(i).bufferedWriter.flush();
+                }
+            }
+            catch (IOException e)
+            {
+                closeAll(clientSock, bufferedReader, bufferedWriter);
+            }
+        }
+        */
+        for (ClientHandler clientHandler : clientHandlers)
+        {
+            try
+            {
+                if (!clientHandler.clientUsername.equals(clientUsername))
+                {
+                    clientHandler.bufferedWriter.write(msg);
+                    //sends a newline character which tells the bufferedReader to stop waiting for input from it
+                    clientHandler.bufferedWriter.newLine();
+                    //a buffer will not be sent to its output stream unless it's full--flush() sends msg unfilled
+                    clientHandler.bufferedWriter.flush();
+                }
+            }
+            catch (IOException e)
+            {
+                closeAll(clientSock, bufferedReader, bufferedWriter);
+            }
+        }
+    }
+
+    public void removeClientHandler()
+    {
+        clientHandlers.remove(this);
+        broadcastMsg(clientUsername + " has left the chat. ");
+    }
+
+    public void closeAll(Socket clientSocket, BufferedReader bufferedReader, BufferedWriter bufferedWriter)
+    {
+        removeClientHandler();
+        try
+        {
+            if (bufferedWriter != null)
+                bufferedWriter.close();
+            //closing a buffer stream closes it underlying stream too
+
+            if (bufferedReader != null)
+                bufferedWriter.close();
+
+            //closing a socket closes its input and output stream too
+            if (clientSocket != null)
+                clientSocket.close();
+        }
+        catch (IOException e)
+        {
+            e.printStackTrace();
+        }
+    }
+}
