@@ -7,10 +7,10 @@ public class Client implements Runnable
 {
 
     //declaration of 4 objects--instances of the classes specified
-    private String username;
-    private Socket socket;
-    private BufferedReader bufferedReader;//used for reading messages from clients
-    private BufferedWriter bufferedWriter;//used for sending messages (sent from other clients) to clients
+    public String username;
+    public Socket socket;
+    public BufferedReader bufferedReader;//used for reading messages from clients
+    public BufferedWriter bufferedWriter;//used for sending messages (sent from other clients) to clients
 
     //constructor instantiates all properties above
     public Client(Socket socket, String username)//constructor instantiates all properties above
@@ -24,7 +24,7 @@ public class Client implements Runnable
         }
         catch (IOException e)
         {
-            closeAll(socket, bufferedReader, bufferedWriter);
+            closeAll();
         }
     }
 
@@ -43,7 +43,7 @@ public class Client implements Runnable
             }
             catch (IOException e)
             {
-                closeAll(socket, bufferedReader, bufferedWriter);
+                closeAll();
             }
         }
     }
@@ -75,11 +75,11 @@ public class Client implements Runnable
         }
         catch (IOException e)
         {
-            closeAll(socket, bufferedReader, bufferedWriter);
+            closeAll();
         }
     }
 
-    public void closeAll(Socket clientSocket, BufferedReader bufferedReader, BufferedWriter bufferedWriter)
+    public void closeAll()
     {
         try
         {
@@ -88,7 +88,7 @@ public class Client implements Runnable
             bufferedWriter.close();
 
             //closes the client socket--which closes its input and output stream too
-            clientSocket.close();
+            socket.close();
         }
         catch (IOException e)
         {
