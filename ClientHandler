@@ -68,7 +68,7 @@ public class ClientHandler implements Runnable
         for (int index = 0; index < clientHandlers.size(); index++) {
             try {
                 //if the clienthandler is not the current clienthandler
-                if (!clientHandlers.get(index).clientUsername.equals(clientUsername)) {
+                if (!clientHandlers.get(index).equals(this)) {
                     //the bufferedWriter send the message to clientSocket
                     clientHandlers.get(index).bufferedWriter.write(msg);
                     //sends a newline character which tells the bufferedReader to stop waiting for input from it
