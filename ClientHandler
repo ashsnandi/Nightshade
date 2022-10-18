@@ -9,10 +9,10 @@ public class ClientHandler implements Runnable
     public static ArrayList<ClientHandler> clientHandlers = new ArrayList<>();
     /*declare a static ArrayList (resizable array that stores reference data types);
     static because we want it to belong to the class not each object of the class*/
-    private Socket clientSock;
+    public Socket clientSock;
     public BufferedReader bufferedReader;//used for reading messages from clients
-    private BufferedWriter bufferedWriter;//used for sending messages (sent from other clients) to clients
-    private String clientUsername;
+    public BufferedWriter bufferedWriter;//used for sending messages (sent from other clients) to clients
+    public String clientUsername;
 
     public ClientHandler(Socket clientSock)//constructor instantiates all properties above
     {
@@ -31,7 +31,7 @@ public class ClientHandler implements Runnable
         }
         catch (IOException e)
         {
-            closeAll(clientSock, bufferedReader, bufferedWriter);
+            closeAll();
         }
     }
 
@@ -57,7 +57,7 @@ public class ClientHandler implements Runnable
             }
             catch (IOException e)
             {
-                closeAll(clientSock, bufferedReader, bufferedWriter);
+                closeAll();
                 break;//break out of while loop
             }
         } while (clientSock.isConnected());//keep looping while clientSocket is connected
@@ -77,12 +77,12 @@ public class ClientHandler implements Runnable
                     clientHandlers.get(index).bufferedWriter.flush();
                 }
             } catch (IOException e) {
-                closeAll(clientSock, bufferedReader, bufferedWriter);
+                closeAll();
             }
         }
     }
 
-    public void closeAll(Socket clientSocket, BufferedReader bufferedReader, BufferedWriter bufferedWriter)
+    public void closeAll()
     {
         try
         {
@@ -91,7 +91,7 @@ public class ClientHandler implements Runnable
             bufferedWriter.close();
 
             //closes the client socket--which closes its input and output stream too
-            clientSocket.close();
+            clientSock.close();
         }
         catch (IOException e)
         {
