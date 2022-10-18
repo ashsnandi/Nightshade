@@ -1,0 +1,132 @@
+
+import java.io.*;
+import java.net.Socket;//provides classes/interfaces for networking
+import java.util.Scanner;//Scanner class provides a text scanner--parses primitive types /strings
+
+public class Client implements Runnable
+{
+
+    //declaration of 4 objects--instances of the classes specified
+    public String username;
+    public Socket socket;
+    public BufferedReader bufferedReader;//used for reading messages from clients
+    public BufferedWriter bufferedWriter;//used for sending messages (sent from other clients) to clients
+
+    //constructor instantiates all properties above
+    public Client(Socket socket, String username)//constructor instantiates all properties above
+    {
+        try
+        {
+            this.socket = socket;
+            this.username = username;
+            this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+        }
+        catch (IOException e)
+        {
+            closeAll();
+        }
+    }
+
+    private static String encrypt(String encString)
+    {
+        char[] array = encString.toCharArray();
+        for (int i = 0; i < encString.length(); i++)
+        {
+            array[i]+=13;
+        }
+        encString = String.valueOf(array);
+        return encString;
+    }
+    private static String decrypt(String encString)
+    {
+        char[] array = encString.toCharArray();
+        for (int i = 0; i < encString.length(); i++)
+        {
+            array[i]-=13;
+        }
+        encString = String.valueOf(array);
+        return encString;
+    }
+
+    /*Enables listening to other clients while sending messages in parallel;
+    it listens to messages broadcasted by the clientHandler*/
+    @Override
+    public void run()
+    {
+        String groupChatMsg;
+        while(socket.isConnected())
+        {
+            try
+            {
+                groupChatMsg = decrypt(bufferedReader.readLine());
+                System.out.println(groupChatMsg);
+            }
+            catch (IOException e)
+            {
+                closeAll();
+            }
+        }
+    }
+    public void sendMsg()//used for sending messages to client handler
+    {
+        try
+        {
+            bufferedWriter.write(username);
+            bufferedWriter.newLine();
+            bufferedWriter.flush();
+
+            Scanner scanner = new Scanner(System.in);
+
+            while (socket.isConnected())
+            {
+                String msg = encrypt(scanner.nextLine());
+
+                bufferedWriter.write(username + ": " + msg);
+                bufferedWriter.newLine();
+                bufferedWriter.flush();
+            }
+        }
+        catch (IOException e)
+        {
+            closeAll();
+        }
+    }
+
+    public void closeAll()
+    {
+        try
+        {
+            //closes buffer streams--which closes it underlying byte streams too
+            bufferedReader.close();
+            bufferedWriter.close();
+
+            //closes the client socket--which closes its input and output stream too
+            socket.close();
+        }
+        catch (IOException e)
+        {
+            System.out.println(e);
+        }
+        catch (NullPointerException e)
+        {
+            System.out.println(e);
+        }
+    }
+
+    public static void main(String args[]) throws IOException
+    {
+        String SERVER_IP = "localhost";
+        int PORT = 1025;
+
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Enter your username: ");
+        String username = scanner.nextLine();
+
+        Socket socket = new Socket(SERVER_IP, PORT);
+        Client client = new Client(socket, username);
+        Thread thread = new Thread(client);
+        thread.start();
+        client.sendMsg();
+    }
+}
