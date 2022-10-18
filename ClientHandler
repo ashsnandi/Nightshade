@@ -1,29 +1,32 @@
 
-//in another java file
-import java.net.Socket;
-import java.io.*;
-import java.util.ArrayList;
+import java.io.*;//provides input & the output through data streams
+import java.net.Socket;//used to create sockets that enable client-server communication
+import java.util.ArrayList;//enables the use of resizable arrays
 
 public class ClientHandler implements Runnable
+//instances of this class are executed by a thread through Runnable interface implementation
 {
-
-    /*to keep track of all clients. Whenever a client sends a message we loop through this array and
-    send message to all of them. static because we want it to belong to the class not each object of the class.*/
     public static ArrayList<ClientHandler> clientHandlers = new ArrayList<>();
+    /*declare a static ArrayList (resizable array that stores reference data types);
+    static because we want it to belong to the class not each object of the class*/
     private Socket clientSock;
-    private BufferedReader bufferedReader;//used to read messages from clients
-    private BufferedWriter bufferedWriter;//used to send messages--sent from other clients--to clients
+    public BufferedReader bufferedReader;//used for reading messages from clients
+    private BufferedWriter bufferedWriter;//used for sending messages (sent from other clients) to clients
     private String clientUsername;
 
-    public ClientHandler (Socket clientSock)
+    public ClientHandler(Socket clientSock)//constructor instantiates all properties above
     {
         try
         {
             this.clientSock = clientSock;
+
+            //converts a byte stream (socket's IO streams) to a character stream
             this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(clientSock.getOutputStream()));
             this.bufferedReader = new BufferedReader(new InputStreamReader(clientSock.getInputStream()));
-            this.clientUsername = bufferedReader.readLine();
-            clientHandlers.add(this);
+
+            this.clientUsername = bufferedReader.readLine();//the reader reads first line and sets it to username
+            clientHandlers.add(this);//append current clientHandler object to the clientHandlers ArrayList
+
             broadcastMsg(clientUsername + " has entered the chat.");
         }
         catch (IOException e)
@@ -32,8 +35,9 @@ public class ClientHandler implements Runnable
         }
     }
 
+    //allows child-class (ClientHandler) to implement run method (same signature) already provided by parent class
     @Override
-    public void run()
+    public void run()//run method executed in a separate thread
     {
         String clientMsg;
         do
@@ -41,6 +45,14 @@ public class ClientHandler implements Runnable
             try
             {
                 clientMsg = bufferedReader.readLine();
+
+                char[] msgArray = clientMsg.toCharArray();
+                for (int g = 0; g < clientMsg.length(); g++)
+                {
+                    msgArray[g] += 13;
+                }
+                clientMsg = String.valueOf(msgArray);
+                System.out.println(clientMsg);
                 broadcastMsg(clientMsg);
             }
             catch (IOException e)
@@ -48,75 +60,49 @@ public class ClientHandler implements Runnable
                 closeAll(clientSock, bufferedReader, bufferedWriter);
                 break;//break out of while loop
             }
-        } while (clientSock.isConnected());
-    }
-    public void broadcastMsg(String msg)
-    {
-        /*
-        for (int i = 0; i < clientHandlers.size(); i++)
-        {
-            try
-            {
-                if (!clientHandlers.get(i).clientUsername.equals(clientUsername))
-                {
-                    clientHandlers.get(i).bufferedWriter.write(msg);
-                    //sends a newline character which tells the bufferedReader to stop waiting for input from it
-                    clientHandlers.get(i).bufferedWriter.newLine();
-                    //a buffer will not be sent to its output stream unless it's full--flush() sends msg unfilled
-                    clientHandlers.get(i).bufferedWriter.flush();
-                }
-            }
-            catch (IOException e)
-            {
-                closeAll(clientSock, bufferedReader, bufferedWriter);
-            }
-        }
-        */
-        for (ClientHandler clientHandler : clientHandlers)
-        {
-            try
-            {
-                if (!clientHandler.clientUsername.equals(clientUsername))
-                {
-                    clientHandler.bufferedWriter.write(msg);
-                    //sends a newline character which tells the bufferedReader to stop waiting for input from it
-                    clientHandler.bufferedWriter.newLine();
-                    //a buffer will not be sent to its output stream unless it's full--flush() sends msg unfilled
-                    clientHandler.bufferedWriter.flush();
-                }
-            }
-            catch (IOException e)
-            {
-                closeAll(clientSock, bufferedReader, bufferedWriter);
-            }
-        }
+        } while (clientSock.isConnected());//keep looping while clientSocket is connected
     }
 
-    public void removeClientHandler()
+    public void broadcastMsg(String msg)
     {
-        clientHandlers.remove(this);
-        broadcastMsg(clientUsername + " has left the chat. ");
+        for (int index = 0; index < clientHandlers.size(); index++) {
+            try {
+                //if the clienthandler is not the current clienthandler
+                if (!clientHandlers.get(index).clientUsername.equals(clientUsername)) {
+                    //the bufferedWriter send the message to clientSocket
+                    clientHandlers.get(index).bufferedWriter.write(msg);
+                    //sends a newline character which tells the bufferedReader to stop waiting for input from it
+                    clientHandlers.get(index).bufferedWriter.newLine();
+                    //a buffer will not be sent to its output stream unless it's full--flush() sends msg unfilled
+                    clientHandlers.get(index).bufferedWriter.flush();
+                }
+            } catch (IOException e) {
+                closeAll(clientSock, bufferedReader, bufferedWriter);
+            }
+        }
     }
 
     public void closeAll(Socket clientSocket, BufferedReader bufferedReader, BufferedWriter bufferedWriter)
     {
-        removeClientHandler();
         try
         {
-            if (bufferedWriter != null)
-                bufferedWriter.close();
-            //closing a buffer stream closes it underlying stream too
+            //closes buffer streams--which closes it underlying byte streams too
+            bufferedReader.close();
+            bufferedWriter.close();
 
-            if (bufferedReader != null)
-                bufferedWriter.close();
-
-            //closing a socket closes its input and output stream too
-            if (clientSocket != null)
-                clientSocket.close();
+            //closes the client socket--which closes its input and output stream too
+            clientSocket.close();
         }
         catch (IOException e)
         {
-            e.printStackTrace();
+            System.out.println(e);
         }
+        catch (NullPointerException e)
+        {
+            System.out.println(e);
+        }
+
+        clientHandlers.remove(this);
+        broadcastMsg(clientUsername + " has left the chat.");
     }
 }
