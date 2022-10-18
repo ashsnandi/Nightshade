@@ -2,6 +2,7 @@
 import java.io.*;
 import java.net.Socket;//provides classes/interfaces for networking
 import java.util.Scanner;//Scanner class provides a text scanner--parses primitive types /strings
+import java.lang.String; //provides classes to manipulate strings
 
 public class Client implements Runnable
 {
@@ -54,13 +55,25 @@ public class Client implements Runnable
     @Override
     public void run()
     {
-        String groupChatMsg;
+        String groupChatMsg = "";
+        String trueMsg = "";
+        String usrName = "";
         while(socket.isConnected())
         {
             try
             {
-                groupChatMsg = decrypt(bufferedReader.readLine());
-                System.out.println(groupChatMsg);
+                groupChatMsg = bufferedReader.readLine();
+                char[] gcMsgArray = groupChatMsg.toCharArray();
+                for (int j = 0; j < groupChatMsg.length(); j++)
+                {
+                    if (gcMsgArray[j] == ':')
+                    {
+                        trueMsg = groupChatMsg.substring(j);
+                        usrName = groupChatMsg.substring(0, j-1);
+                    }
+                }
+
+                System.out.println(usrName + decrypt(trueMsg));
             }
             catch (IOException e)
             {
