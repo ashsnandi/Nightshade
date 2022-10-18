@@ -1,63 +1,59 @@
 
-
 //import all classes from both packages using *
-import java.io.*;//used to process input (texts/binary files) & the output (java files)
-import java.net.*;//provides classes/interfaces for networking
+import java.io.*;//provides input & the output through data streams
+import java.net.*;//provides classes for networking
 
 public class Server
 {
     private ServerSocket serverSock;
-    //private object is responsible for listening for incoming connections and communicating with them via sockets
+    //declaring an object (private to Server class) of type ServerSocket--creates sockets that enable client-server communication
 
-    public Server(ServerSocket serverSock)//constructor sets up the server socket
+    public Server(ServerSocket serverSock)
     {
+        //constructor instantiates the Server socket object from parameter
         this.serverSock = serverSock;
     }
 
-    public void startServer()//method with no return type is responsible for keeping the server running
+    public void startServer()//method with no return type is responsible to start and remain connected to clients
     {
-        try
+        do
         {
-            do
+            //try-block contains error-prone code; in case of error catch-block executes
+            try
             {
-                /*accept() method blocks/halts program until a client connects.
-                if client connects, the method returns the client socket*/
+                //accept method halts program until a client connects; in which case it returns the client socket
                 Socket clientSock = serverSock.accept();
                 System.out.println("A CLIENT HAS CONNECTED");
-                /*creates a chat object from class ServerChat--which has implemented an Interface called Runnable.
-                Runnable is an interface implemented on a class whose instances will each be executed by a separate thread.*/
+
+                //creates a clientHandler object and passes the client socket to the class's constructor
                 ClientHandler clientHandler = new ClientHandler(clientSock);
 
-                Thread thread = new Thread(clientHandler);//make a thread object and pass the socket(with runnable) to it
+                Thread thread = new Thread(clientHandler);//make a thread object and pass the clientHandler to it
                 thread.start();//Causes this thread to begin execution; the JVM calls the run method of this thread
 
-            } while (!serverSock.isClosed());//keep looping while server socket is not closed
-        }
-        catch (IOException e) {}
+            }
+            catch (IOException e)
+            {
+                System.out.println(e);
+                break;
+            }
+            catch (Exception e)
+            {
+                System.out.println(e);
+                break;
+            }
+        } while (!serverSock.isClosed());//keep looping while server socket is not closed
     }
 
-    public void closeServer()
-    {
-        try
-        {
-            if (serverSock != null)
-                serverSock.close();
-        }
-        catch (IOException e)
-        {
-            e.printStackTrace();
-        }
-
-    }
-
+    //main method kickstarts execution of program and throws an IOException signal if an input/output error occurs
     public static void main(String args[]) throws IOException
     {
         //we are not root users in the school system, so we must use a port higher than 1025
-        int PORT = 8372;
+        int PORT = 1025;
 
-        ServerSocket serverSock = new ServerSocket(PORT);
-        Server server = new Server(serverSock);
-        server.startServer();
+        ServerSocket serverSock = new ServerSocket(PORT);//creates a server socket, bound to a specified port
+        Server server = new Server(serverSock);//creates a server object and passes the server socket to its constructor
+        server.startServer();//calls its startServer method
     }
 }
 
