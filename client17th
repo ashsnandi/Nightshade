@@ -1,18 +1,19 @@
-import javax.imageio.IIOException;
+
 import java.io.*;
 import java.net.Socket;//provides classes/interfaces for networking
-import java.util.Scanner;
+import java.util.Scanner;//Scanner class provides a text scanner--parses primitive types /strings
 
-public class Client
+public class Client implements Runnable
 {
+
     //declaration of 4 objects--instances of the classes specified
     private String username;
     private Socket socket;
-    private BufferedReader bufferedReader;
-    private BufferedWriter bufferedWriter;
+    private BufferedReader bufferedReader;//used for reading messages from clients
+    private BufferedWriter bufferedWriter;//used for sending messages (sent from other clients) to clients
 
     //constructor instantiates all properties above
-    public Client(Socket socket, String username)
+    public Client(Socket socket, String username)//constructor instantiates all properties above
     {
         try
         {
@@ -25,11 +26,28 @@ public class Client
         {
             closeAll(socket, bufferedReader, bufferedWriter);
         }
-
     }
 
-    //used to send message to client handler
-    public void sendMsg()
+    /*Enables listening to other clients while sending messages in parallel;
+    it listens to messages broadcasted by the clientHandler*/
+    @Override
+    public void run()
+    {
+        String groupChatMsg;
+        while(socket.isConnected())
+        {
+            try
+            {
+                groupChatMsg = bufferedReader.readLine();
+                System.out.println(groupChatMsg);
+            }
+            catch (IOException e)
+            {
+                closeAll(socket, bufferedReader, bufferedWriter);
+            }
+        }
+    }
+    public void sendMsg()//used for sending messages to client handler
     {
         try
         {
@@ -42,6 +60,14 @@ public class Client
             while (socket.isConnected())
             {
                 String msg = scanner.nextLine();
+
+                char[] msgArray = msg.toCharArray();
+                for (int g = 0; g < msg.length(); g++)
+                {
+                    msgArray[g] -= 13;
+                }
+                msg = String.valueOf(msgArray);
+
                 bufferedWriter.write(username + ": " + msg);
                 bufferedWriter.newLine();
                 bufferedWriter.flush();
@@ -53,65 +79,40 @@ public class Client
         }
     }
 
-    //enables listening to other clients while sending messages in parallel
-    //it listens to messages broadcasted by the clientHandler
-    public void listenMsg()
-    {
-        new Thread(new Runnable()
-        {
-            @Override
-            public void run()
-            {
-                String groupChatMsg;
-                while(socket.isConnected())
-                {
-                    try
-                    {
-                        groupChatMsg = bufferedReader.readLine();
-                        System.out.println(groupChatMsg);
-                    }
-                    catch (IOException e)
-                    {
-                        closeAll(socket, bufferedReader, bufferedWriter);
-                    }
-                }
-            }
-        }).start();
-
-    }
-
     public void closeAll(Socket clientSocket, BufferedReader bufferedReader, BufferedWriter bufferedWriter)
     {
         try
         {
-            if (bufferedWriter != null)
-                bufferedWriter.close();
-            //closing a buffer stream closes it underlying stream too
+            //closes buffer streams--which closes it underlying byte streams too
+            bufferedReader.close();
+            bufferedWriter.close();
 
-            if (bufferedReader != null)
-                bufferedWriter.close();
-
-            //closing a socket closes its input and output stream too
-            if (clientSocket != null)
-                clientSocket.close();
+            //closes the client socket--which closes its input and output stream too
+            clientSocket.close();
         }
         catch (IOException e)
         {
-            e.printStackTrace();
+            System.out.println(e);
+        }
+        catch (NullPointerException e)
+        {
+            System.out.println(e);
         }
     }
 
     public static void main(String args[]) throws IOException
     {
         String SERVER_IP = "localhost";
-        int PORT = 8372;
+        int PORT = 1025;
 
         Scanner scanner = new Scanner(System.in);
         System.out.println("Enter your username: ");
         String username = scanner.nextLine();
+
         Socket socket = new Socket(SERVER_IP, PORT);
         Client client = new Client(socket, username);
-        client.listenMsg();
+        Thread thread = new Thread(client);
+        thread.start();
         client.sendMsg();
     }
 }
