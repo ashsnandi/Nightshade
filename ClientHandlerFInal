@@ -1,0 +1,103 @@
+
+import java.io.*;//import all classes from package >> provides input & the output through data streams
+import java.net.Socket;//used to create sockets that enable client-server communication
+import java.util.ArrayList;//enables the use of resizable arrays
+
+public class ClientHandler implements Runnable
+//instances of this class are executed by a thread through Runnable interface implementation
+{
+    //declare private instance variables of the class
+    private static ArrayList<ClientHandler> clientHandlers = new ArrayList<>();
+    /*declare a static ArrayList (resizable array that stores reference data types);
+    static because we want it to belong to the class not each object of the class*/
+
+    private Socket clientSock;
+    private BufferedReader bufferedReader;//used for reading messages from clients
+    private BufferedWriter bufferedWriter;//used for sending messages (sent from other clients) to clients
+    private String clientUsername;
+
+    public ClientHandler(Socket clientSock)//constructor instantiates all properties above
+    {
+        try
+        {
+            this.clientSock = clientSock;
+
+            //converts a byte stream (socket's IO streams) to a character stream
+            this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(clientSock.getOutputStream()));
+            this.bufferedReader = new BufferedReader(new InputStreamReader(clientSock.getInputStream()));
+            this.clientUsername = bufferedReader.readLine();//the reader reads first line and sets it to username
+            clientHandlers.add(this);//append current clientHandler object to the clientHandlers ArrayList
+            broadcastMsg(clientUsername + " has entered the chat");
+        }
+        catch (IOException e)
+        {
+            closeAll();
+        }
+    }
+
+    //override allows child-class (ClientHandler) to implement run method(same signature)already provided by
+    @Override
+    public void run()//run method executed in a separate thread
+    {
+        String clientMsg;
+
+        do
+        {
+            try
+            {
+                clientMsg = bufferedReader.readLine();
+                System.out.println(clientMsg);
+                broadcastMsg(clientMsg);
+            }
+            catch (IOException e)
+            {
+                closeAll();
+            }
+        } while (clientSock.isConnected());//keep looping while clientSocket is connected
+    }
+
+    public void broadcastMsg(String msg)
+    {
+        for (int index = 0; index < clientHandlers.size(); index++)
+        {
+            try {
+
+                //if the clienthandler is not the current clienthandler
+                if (!clientHandlers.get(index).equals(this))
+                {
+
+                    //the bufferedWriter sends the message to the clientSocket
+                    clientHandlers.get(index).bufferedWriter.write(msg);
+                    //sends a newline character which tells the bufferedReader to stop waiting for input from it
+                    clientHandlers.get(index).bufferedWriter.newLine();
+                    //a buffer will not be sent to its output stream unless it's full--so flush() sends msg unfilled
+                    clientHandlers.get(index).bufferedWriter.flush();
+                }
+            }
+            catch (IOException e)
+            {
+                closeAll();
+            }
+        }
+    }
+
+    public void closeAll()
+    {
+        try
+        {
+            //closes buffer streams--which closes it underlying byte streams too
+            bufferedReader.close();
+            bufferedWriter.close();
+
+            //closes the client socket--which closes its input and output stream too
+            clientSock.close();
+        }
+        catch (IOException e)
+        {
+            System.out.println(e);
+        }
+
+        clientHandlers.remove(this);//remove current client handler from clientHandlers arrayList
+        broadcastMsg(clientUsername + " has left the chat.");
+    }
+}
