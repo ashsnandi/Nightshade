@@ -1,0 +1,79 @@
+
+//import 3 classes from their corresponding packages
+import java.io.IOException;//general class of exceptions produced by interrupted input/output operations
+import java.net.ServerSocket;//creating server socket objects
+import java.net.Socket;//implements client sockets--endpoint of communication between programs running on the network
+import javax.swing.JOptionPane;//used for popping up a standard dialog box
+
+public class Server
+{
+    public ServerSocket serverSock;
+    //declaring an object of type ServerSocket-sockets which wait for requests to come in over the network
+
+    public Server(ServerSocket serverSock)
+    {
+        //constructor instantiates the Server socket object from its parameter
+        this.serverSock = serverSock;
+    }
+
+    /*startServer method with no return type is responsible to start and remain connected to clients
+    an exception is thrown if an I/O error occurs when closing socket in catch block*/
+    public void startServer() throws IOException//
+    {
+        do
+        {
+            try//try-block contains error-prone code; in case of error, catch-block executes
+            {
+                //accept method halts program until a client connects; in which case it returns the client socket
+                Socket clientSock = serverSock.accept();
+                System.out.println("A CLIENT HAS CONNECTED");
+
+                //creates a clientHandler object and passes the client socket to the new object's constructor
+                ClientHandler clientHandler = new ClientHandler(clientSock);
+
+                //make a thread object and pass the clientHandler object to its constructor
+                Thread thread = new Thread(clientHandler);
+                thread.start();//Causes this thread to begin execution; the JVM calls the run method of this thread
+            }
+            catch (Exception e)
+            {
+                System.out.println("An error has occurred!");
+                serverSock.close();//closes the server socket if an error occurs
+            }
+        } while (!serverSock.isClosed());//keep looping while server socket is not closed
+    }
+
+    //the main thread kickstarts execution of program
+    public static void main(String args[])
+    {
+        //declaring variables of data types integer and boolean
+        int port;//we are not root users in the school system, so we must use a port higher than 1025
+        boolean errorFree;
+        
+        do
+        {
+            try
+            {
+                //parse the inputted string from input dialogue to an integer and set it to port variable
+                port = Integer.parseInt(JOptionPane.showInputDialog("Enter port number: "));
+                errorFree = true;//assigning true to boolean data type each time loop reiterates
+
+                ServerSocket serverSock = new ServerSocket(port);//creates a server socket, bound to a specified port
+
+                //creates a server object and passes the server socket to its constructor
+                Server server = new Server(serverSock);
+                server.startServer();
+            }
+            catch (IOException e)//executes in case an object of class IOException is thrown
+            {
+                System.out.println("An error has occurred! Try again.");
+                errorFree = false;
+            }
+        } while (!errorFree);//loop reiterates as long as an error occurs
+    }
+    
+}
+
+
+
+
