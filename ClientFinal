@@ -1,0 +1,234 @@
+import java.io.*;//import all classes from package >> provides input & the output through data streams
+import java.net.Socket;//used to create sockets that enable client-server communication
+import java.util.Random;
+import java.util.Scanner;//Scanner class provides a text scanner--parses primitive types /strings
+import java.math.BigInteger;//class provides immutable arbitrary-precision integers
+import java.net.UnknownHostException;//provides an exception when IP address of host cannot be determined
+
+public class Client implements Runnable
+//instances of this class are executed by a thread through Runnable interface implementation
+{
+    //declaration of 4 objects--instances of the classes specified
+    private String username;
+    private Socket socket;
+    private BufferedReader bufferedReader;//used for reading messages from clients
+    private BufferedWriter bufferedWriter;//used for sending messages (sent from other clients) to clients
+    public long friendPublicKey;
+    private int publicKey, privateValue;
+    private char MARK1, MARK2;
+    BigInteger privateKey;
+    boolean handshake;
+
+    public Client(Socket socket, String username)//constructor instantiates all properties above
+    {
+        try
+        {
+            this.socket = socket;
+            this.username = username;
+            this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
+            this.publicKey = generatePublicKey();
+            this.MARK1 = '\u200f';
+            this.MARK2 = '\u200e';
+        }
+        catch (IOException e)
+        {
+            closeAll();
+        }
+    }
+
+    private int generatePublicKey()//private method returns an integer public key
+    {
+        final int MODULO = 13;//a constant integer prime number
+        final int GENERATOR = 6;//constant integer, primitive root of MODULO
+
+        Random randomNum = new Random();//creates a random number generator object
+        //one int value in the specified range (20 to 20) is pseudorandomly generated and returned
+        int randInt = randomNum.nextInt((20 - 2) + 1) + 2;
+
+        privateValue = randInt;
+        publicKey = (int)(Math.pow(GENERATOR, privateValue) % MODULO);//type cast the result of modulus operation to int
+
+        return publicKey;
+    }
+
+    private void doHandshake(boolean starter)
+    {
+        try
+        {
+            if (starter)//if the parameter was set to true
+            {
+                bufferedWriter.write(encrypt(username + " has entered the chat ") + MARK1 + encrypt(String.valueOf(publicKey)) + MARK2);
+                bufferedWriter.newLine();
+                bufferedWriter.flush();
+            }
+            else if (!starter && !handshake)//if both starter and handshake were set to false
+            {
+                bufferedWriter.write(encrypt(username + " is in the chat ") + MARK1 + encrypt(String.valueOf(publicKey)) + MARK2 + "U+200F");
+                bufferedWriter.newLine();
+                bufferedWriter.flush();
+                handshake = true;
+            }
+        }
+        catch (IOException e)
+        {
+            System.out.println("An error has occurred!");
+            closeAll();
+        }
+    }
+
+    private String encrypt(String msgStr)
+    {
+        String encryptedMsg;
+        int charIncrement;
+
+        //if private key hasn't been set yet set increment value to 15, and int private key otherwise
+        charIncrement = privateKey == null ? 15 : privateKey.intValue();
+
+        char[] msgArray = msgStr.toCharArray();//convert string to an array of characters
+        for (int i = 0; i < msgStr.length(); i++)
+            msgArray[i] += charIncrement;//increment each character in msgArray by privateKey
+
+        encryptedMsg = String.valueOf(msgArray);//turn array of characters to a string
+        return encryptedMsg;
+    }
+
+    private String decrypt(String encryptedMsg)
+    {
+        String decryptedMsg;
+        int charIncrement;
+
+        charIncrement = privateKey == null ? 15 : privateKey.intValue();
+
+        char[] msgArray = encryptedMsg.toCharArray();
+        for (int i = 0; i < encryptedMsg.length(); i++)
+            msgArray[i] -= charIncrement;//decrement each character in msgArray by privateKey
+
+        decryptedMsg = String.valueOf(msgArray);
+        return decryptedMsg;
+    }
+
+
+    //override allows clientHandler object to implement run method of interface--since they have the same signatures
+    //threading the run method enables listening to other clients while sending messages in parallel
+    @Override
+    public void run()
+    {
+        String groupChatMsg, trueMsg, usrName;
+        boolean isColon = false;
+
+        while (socket.isConnected())
+        {
+            try
+            {
+                groupChatMsg = bufferedReader.readLine();//reads a line of text provided by the socket's buffered stream
+                char[] gcMsgArray = groupChatMsg.toCharArray();
+
+                for (int index = 0; index < groupChatMsg.length(); index++)
+                {
+                    if (gcMsgArray[index] == ':')
+                    {
+                        usrName = groupChatMsg.substring(0, index);
+                        trueMsg = groupChatMsg.substring(index + 2, groupChatMsg.indexOf(MARK1));
+                        System.out.println(usrName + ": " + decrypt(trueMsg));//shows message without the public key
+                        isColon = true;
+                        break;//break out of for-loop
+                    }
+                }
+
+                if (!isColon)//if no colon is present >> the handshake hasn't completed
+                {
+                    if (groupChatMsg.contains("U+200F"))//if the message contains that character
+                        handshake = true;
+
+                    trueMsg = groupChatMsg.substring(0, groupChatMsg.indexOf(MARK1));
+                    String tempStr = groupChatMsg.substring(groupChatMsg.indexOf(MARK1) + 1, groupChatMsg.indexOf(MARK2));
+                    System.out.println(decrypt(trueMsg));//output the section of the message without the key
+                    doHandshake(false);
+                    friendPublicKey = Long.parseLong(decrypt(tempStr));//parses the decrypted public key to a long
+
+                    //BigInteger valueOf method returns a BigInteger after modulus operation
+                    privateKey = (BigInteger.valueOf(friendPublicKey).pow(privateValue)).mod(BigInteger.valueOf(13));
+                }
+            }
+            catch (IOException e)
+            {
+                System.out.println("An error has occurred!");
+                closeAll();
+            }
+        }
+    }
+
+    private void sendMsg()//used for sending messages to output stream of socket, later broadcasted by its client handler
+    {
+        //Creates a new Scanner object that scans input stream and returns it
+        Scanner scanner = new Scanner(System.in);
+
+        try
+        {
+            while (socket.isConnected())
+            {
+                String msg = scanner.nextLine();//scanner returns the line containing input values as a string
+
+                //buffer sends and flushes an unfilled message which is encrypted to the output stream of socket
+                bufferedWriter.write(username + ": " + encrypt(msg) + MARK1 + encrypt(String.valueOf(publicKey)) + MARK2);
+                bufferedWriter.newLine();
+                bufferedWriter.flush();
+            }
+        }
+        catch (Exception e)
+        {
+            System.out.println("An error has occurred!");
+            closeAll();
+        }
+    }
+
+    public void closeAll()//method used for preventing nested try-catches in other methods
+    {
+        try
+        {
+            //closes buffer streams--which closes it underlying byte streams too
+            bufferedReader.close();
+            bufferedWriter.close();
+
+            //closes the client socket--which closes its input and output stream too
+            socket.close();
+        }
+        catch (IOException e)
+        {
+            System.out.println("An error has occurred!");
+        }
+        System.exit(0);
+    }
+
+    public static void main(String args[])
+    {
+        final int PORT = 1025;//initializing constant value port number
+        String username;
+        String SERVER_IP = "localhost";
+        Scanner scanner = new Scanner(System.in);
+
+        try
+        {
+            System.out.println("Enter your username:");
+            username = scanner.nextLine();//returns current line containing input as a string
+
+            Socket socket = new Socket(SERVER_IP, PORT);
+            Client client = new Client(socket, username);
+            Thread thread = new Thread(client);
+            thread.start();
+            client.doHandshake(true);
+            client.sendMsg();
+        }
+        catch (UnknownHostException e)
+        {
+            System.out.println("Error! Cannot determine IP address of host. Try again.");
+            System.exit(0);
+        }
+        catch (IOException e)
+        {
+            System.out.println("An error has occurred!");
+            System.exit(0);
+        }
+    }
+}
