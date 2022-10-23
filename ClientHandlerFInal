@@ -1,4 +1,3 @@
-
 import java.io.*;//import all classes from package >> provides input & the output through data streams
 import java.net.Socket;//used to create sockets that enable client-server communication
 import java.util.ArrayList;//enables the use of resizable arrays
@@ -14,20 +13,16 @@ public class ClientHandler implements Runnable
     private Socket clientSock;
     private BufferedReader bufferedReader;//used for reading messages from clients
     private BufferedWriter bufferedWriter;//used for sending messages (sent from other clients) to clients
-    private String clientUsername;
 
     public ClientHandler(Socket clientSock)//constructor instantiates all properties above
     {
         try
         {
             this.clientSock = clientSock;
-
             //converts a byte stream (socket's IO streams) to a character stream
             this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(clientSock.getOutputStream()));
             this.bufferedReader = new BufferedReader(new InputStreamReader(clientSock.getInputStream()));
-            this.clientUsername = bufferedReader.readLine();//the reader reads first line and sets it to username
             clientHandlers.add(this);//append current clientHandler object to the clientHandlers ArrayList
-            broadcastMsg(clientUsername + " has entered the chat");
         }
         catch (IOException e)
         {
@@ -35,12 +30,11 @@ public class ClientHandler implements Runnable
         }
     }
 
-    //override allows child-class (ClientHandler) to implement run method(same signature)already provided by
+    //override allows clientHandler objects to implement run method of interface--since they have the same signatures
     @Override
-    public void run()//run method executed in a separate thread
+    public void run()//run method executes on a separate thread
     {
         String clientMsg;
-
         do
         {
             try
@@ -56,16 +50,15 @@ public class ClientHandler implements Runnable
         } while (clientSock.isConnected());//keep looping while clientSocket is connected
     }
 
-    public void broadcastMsg(String msg)
+    private void broadcastMsg(String msg)
     {
         for (int index = 0; index < clientHandlers.size(); index++)
         {
-            try {
-
+            try
+            {
                 //if the clienthandler is not the current clienthandler
                 if (!clientHandlers.get(index).equals(this))
                 {
-
                     //the bufferedWriter sends the message to the clientSocket
                     clientHandlers.get(index).bufferedWriter.write(msg);
                     //sends a newline character which tells the bufferedReader to stop waiting for input from it
@@ -94,10 +87,10 @@ public class ClientHandler implements Runnable
         }
         catch (IOException e)
         {
-            System.out.println(e);
+            System.out.println("An error has occurred!");
         }
 
         clientHandlers.remove(this);//remove current client handler from clientHandlers arrayList
-        broadcastMsg(clientUsername + " has left the chat.");
+        System.exit(0);//terminates the currently running Java Virtual Machine
     }
 }
